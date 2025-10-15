@@ -1,0 +1,60 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Environment
+.env
+.env.local
+.env
+rag_env/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Keep backend/uploads directory but ignore its contents
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Keep chroma_db directory but ignore its contents (vector DB persistence)
+chroma_db/*
+!chroma_db/.gitkeep
+
+# Ignore common large doc types by default (uploaded via API rather than git)
+*.pdf
+*.docx
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
