@@ -317,99 +317,22 @@ sudo docker-compose up -d
 
 ### Example: Deploy to Google Cloud Platform (GCP)
 
-You can deploy in two common ways on GCP. If you want the simplest path that matches this repo’s docker-compose setup, use Compute Engine (VM). If you prefer serverless, use Cloud Run and deploy the backend and frontend as separate services.
-
-#### Option A: Compute Engine (VM) with Docker Compose
-
-1) Create a VM
-- Go to GCP Console → Compute Engine → VM instances → Create instance
-- Machine: e2-standard-2 (or similar), Ubuntu 22.04 LTS
-- Firewall: Check "Allow HTTP" and "Allow HTTPS". Also open TCP 8000 and 8501 or put a reverse proxy in front (recommended for prod).
-
-2) SSH into the VM and install Docker + Compose
-
 ```bash
-sudo apt update -y
-sudo apt install -y docker.io docker-compose git
-sudo usermod -aG docker "$USER"
-newgrp docker
+# SSH into GCP Compute Engine instance
+gcloud compute ssh your-instance-name
+
+# Install Docker
+sudo apt update
+sudo apt install docker.io docker-compose -y
+
+# Clone and configure
+git clone https://github.com/Mohd-Farhan-Khan/Query-your-docs.git
+cd Query-your-docs
+nano .env  # Add production values
+
+# Run
+sudo docker-compose up -d
 ```
-
-3) Clone the repo and configure environment
-
-```bash
-git clone https://github.com/<your-org-or-user>/<your-repo>.git
-cd <your-repo>
-
-# Copy and edit env
-cp .env.example .env
-nano .env    # set GEMINI_API_KEY and MONGODB_URI (MongoDB Atlas recommended)
-```
-
-4) Start the stack
-
-```bash
-docker-compose up -d
-```
-
-5) Access
-- Frontend (Streamlit): http://<vm-external-ip>:8501
-- Backend API: http://<vm-external-ip>:8000
-- Swagger docs: http://<vm-external-ip>:8000/docs
-
-Notes
-- This compose file runs frontend and backend on the same Docker network; the frontend uses `http://backend:8000` internally.
-- For production hardening, put Nginx in front (port 80/443) → proxy to 8501 and 8000, add TLS via Let’s Encrypt.
-- ChromaDB persists in `chroma_db/` (mounted volume); uploaded files persist under `backend/uploads/`.
-
-#### Option B: Cloud Run (serverless) — optional
-
-Cloud Run doesn’t run docker-compose; deploy the services separately:
-
-1) Build and push two images (from repo root)
-
-```bash
-gcloud auth configure-docker
-
-# Backend image
-gcloud builds submit --tag gcr.io/$GOOGLE_CLOUD_PROJECT/rag-backend ./backend
-
-# Frontend image
-gcloud builds submit --tag gcr.io/$GOOGLE_CLOUD_PROJECT/rag-frontend ./frontend
-```
-
-2) Deploy Backend to Cloud Run
-
-```bash
-gcloud run deploy rag-backend \
-  --image gcr.io/$GOOGLE_CLOUD_PROJECT/rag-backend \
-  --platform managed \
-  --region <your-region> \
-  --allow-unauthenticated \
-  --set-env-vars MONGODB_URI="<your-mongodb-uri>",MONGODB_DB_NAME="rag_documents",GEMINI_API_KEY="<your-gemini-key>",CHROMA_PERSIST_DIR="/tmp/chroma_db"
-```
-
-3) Deploy Frontend to Cloud Run (point it to backend URL)
-
-```bash
-BACKEND_URL="https://$(gcloud run services describe rag-backend --region <your-region> --format='value(status.url)')"
-
-gcloud run deploy rag-frontend \
-  --image gcr.io/$GOOGLE_CLOUD_PROJECT/rag-frontend \
-  --platform managed \
-  --region <your-region> \
-  --allow-unauthenticated \
-  --set-env-vars BACKEND_URL="$BACKEND_URL"
-```
-
-4) Access the frontend service URL printed by Cloud Run.
-
-Important notes for Cloud Run
-- Cloud Run storage is ephemeral; setting `CHROMA_PERSIST_DIR=/tmp/chroma_db` keeps data only for the lifetime of the instance. For persistence, consider:
-  - Switching to a managed vector DB (e.g., Qdrant Cloud, Pinecone) OR
-  - Running Chroma on a VM with attached disk (Compute Engine) OR
-  - Using GKE with a PersistentVolume.
-- Uploaded files should be stored in a durable location (e.g., Google Cloud Storage) in production. The current setup writes to local disk; for Cloud Run you’d adapt the upload code to write to GCS.
 
 ## 📝 License
 
